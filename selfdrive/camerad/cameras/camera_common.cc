@@ -25,6 +25,8 @@
 #include "selfdrive/camerad/cameras/camera_qcom2.h"
 #elif WEBCAM
 #include "selfdrive/camerad/cameras/camera_webcam.h"
+#elif JETSON
+#include "selfdrive/camerad/cameras/camera_csi.h"
 #else
 #include "selfdrive/camerad/cameras/camera_replay.h"
 #endif

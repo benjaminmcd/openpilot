@@ -34,7 +34,7 @@ bool Route::load() {
 
 bool Route::loadFromServer() {
   QEventLoop loop;
-  HttpRequest http(nullptr, !Hardware::PC());
+  HttpRequest http(nullptr, !(Hardware::PC() || Hardware::NX()));
   QObject::connect(&http, &HttpRequest::requestDone, [&](const QString &json, bool success) {
     loop.exit(success ? loadFromJson(json) : 0);
   });

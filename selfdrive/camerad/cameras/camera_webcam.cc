@@ -22,10 +22,8 @@
 const int ROAD_CAMERA_ID = util::getenv("ROADCAM_ID", 1);
 const int DRIVER_CAMERA_ID = util::getenv("DRIVERCAM_ID", 2);
 
-#define FRAME_WIDTH  1164
-#define FRAME_HEIGHT 874
-#define FRAME_WIDTH_FRONT  1152
-#define FRAME_HEIGHT_FRONT 864
+#define FRAME_WIDTH  1280
+#define FRAME_HEIGHT 720
 
 extern ExitHandler do_exit;
 
@@ -33,22 +31,23 @@ namespace {
 
 CameraInfo cameras_supported[CAMERA_ID_MAX] = {
   // road facing
-  [CAMERA_ID_LGC920] = {
+  [CAMERA_ID_IMX219] = {
       .frame_width = FRAME_WIDTH,
       .frame_height = FRAME_HEIGHT,
       .frame_stride = FRAME_WIDTH*3,
       .bayer = false,
       .bayer_flip = false,
-  },
-  // driver facing
-  [CAMERA_ID_LGC615] = {
-      .frame_width = FRAME_WIDTH_FRONT,
-      .frame_height = FRAME_HEIGHT_FRONT,
-      .frame_stride = FRAME_WIDTH_FRONT*3,
-      .bayer = false,
-      .bayer_flip = false,
-  },
+  }
 };
+
+std::string gstreamer_pipeline(int sensor_id, int capture_width, int capture_height, int framerate, int flip_method, int display_width, int display_height)
+  {
+    //    return "nvarguscamerasrc sensor_mode=4 sensor-id=" + std::to_string(sensor_id) + " ! video/x-raw(memory:NVMM), width=3264, height=2464, framerate=(fraction)" + std::to_string(framerate) + "/1, format=(string)NV12 ! nvvidconv flip-method=2 ! video/x-raw, format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)BGR ! videoscale ! video/x-raw,width=" + std::to_string(width) + ",height=" + std::to_string(height) + " ! appsink";
+    return "nvarguscamerasrc sensor_mode=4 sensor-id=" + std::to_string(sensor_id) + " ! video/x-raw(memory:NVMM), width=(int)" + std::to_string(capture_width) + ", height=(int)" +
+           std::to_string(capture_height) + ", format=(string)NV12, framerate=(fraction)" + std::to_string(framerate) +
+           "/1 ! nvvidconv flip-method=" + std::to_string(flip_method) + " ! video/x-raw, width=(int)" + std::to_string(display_width) + ", height=(int)" +
+           std::to_string(display_height) + ", format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)BGR ! appsink";
+  }
 
 void camera_open(CameraState *s, bool rear) {
   // empty
@@ -68,6 +67,7 @@ void camera_init(VisionIpcServer * v, CameraState *s, int camera_id, unsigned in
   s->buf.init(device_id, ctx, s, v, FRAME_BUF_COUNT, rgb_type, yuv_type);
 }
 
+/*
 void run_camera(CameraState *s, cv::VideoCapture &video_cap, float *ts) {
   assert(video_cap.isOpened());
 
@@ -95,36 +95,107 @@ void run_camera(CameraState *s, cv::VideoCapture &video_cap, float *ts) {
     buf_idx = (buf_idx + 1) % FRAME_BUF_COUNT;
   }
 }
+*/
 
 static void road_camera_thread(CameraState *s) {
   util::set_thread_name("webcam_road_camera_thread");
+  std::string pipeline = gstreamer_pipeline(
+      0,
+      1280,
+      720,
+      s->fps,
+      0,
+      FRAME_WIDTH,
+      FRAME_HEIGHT);
 
-  cv::VideoCapture cap_road(ROAD_CAMERA_ID, cv::CAP_V4L2); // road
-  cap_road.set(cv::CAP_PROP_FRAME_WIDTH, 853);
-  cap_road.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
-  cap_road.set(cv::CAP_PROP_FPS, s->fps);
-  cap_road.set(cv::CAP_PROP_AUTOFOCUS, 0); // off
-  cap_road.set(cv::CAP_PROP_FOCUS, 0); // 0 - 255?
-  // cv::Rect roi_rear(160, 0, 960, 720);
+  cv::VideoCapture cap_road(pipeline, cv::CAP_GSTREAMER); // road
 
-  // transforms calculation see tools/webcam/warp_vis.py
-  float ts[9] = {1.50330396, 0.0, -59.40969163,
-                  0.0, 1.50330396, 76.20704846,
-                  0.0, 0.0, 1.0};
+  std::cout << "Using pipeline: \n\t" << pipeline << "\n";
+
+  std::cout << "Road Started: " << cap_road.isOpened() << "\n";
+
+  //float ts[9] = {-0.61904762, 0.0, 909,
+ //                 0.0, -0.46523517, 689,
+  //                0.0, 0.0, 1.0};
+
+  //float ts[9] = {1.06246351, 0.0, 21.01926445,
+  //                0.0, 1.06246351, -137.79276124,
+  //               0.0, 0.0, 1.0};
+
+  //float ts[9] = {1.03317725, 0.0, -19.30915697,
+  //                0.0, 1.03317725, -14.49845635,
+  //               0.0, 0.0, 1.0};
   // if camera upside down:
   // float ts[9] = {-1.50330396, 0.0, 1223.4,
   //                 0.0, -1.50330396, 797.8,
   //                 0.0, 0.0, 1.0};
+  float ts[9] = {1.50330396, 0.0, -59.40969163,
+                  0.0, 1.50330396, 76.20704846,
+                  0.0, 0.0, 1.0};
 
-  run_camera(s, cap_road, ts);
+  assert(cap_road.isOpened());
+
+  cv::Size size(FRAME_WIDTH, FRAME_HEIGHT);
+  cv::Mat transform = cv::Mat(3, 3, CV_32F, ts);
+  //std::cout << transform << "\n";
+  uint32_t frame_id = 0;
+  size_t buf_idx = 0;
+
+  cv::Mat frame_mat, transformed_mat;
+  //cv::cuda::GpuMat src_gpu, dst_gpu, tf_gpu;
+  //tf_gpu.upload(transform);
+
+  while (!do_exit) {
+    cap_road.read(frame_mat);
+
+    //src_gpu.upload(frame_mat);
+
+	  //transformed_mat.create(frame_mat.size(), frame_mat.type());
+	  //dst_gpu.upload(transformed_mat);
+
+    if (frame_mat.empty()) continue;
+
+
+    //
+   
+    //cv::warpPerspective(frame_mat, transformed_mat, transform, cv::Size(FRAME_WIDTH, FRAME_HEIGHT));
+      // ... Contents of your main
+    transformed_mat = frame_mat;
+    
+    //cv::cuda::warpPerspective(src_gpu, dst_gpu, tf_gpu, size, cv::INTER_LINEAR , cv::BORDER_CONSTANT, 0.0, cv::cuda::Stream::Null());
+    
+    //cv::undistort(frame_mat, transformed_mat, transform, distCoeffs)
+    //dst_gpu.download(transformed_mat);
+
+    s->buf.camera_bufs_metadata[buf_idx] = {.frame_id = frame_id};
+
+    auto &buf = s->buf.camera_bufs[buf_idx];
+    int transformed_size = transformed_mat.total() * transformed_mat.elemSize();
+    CL_CHECK(clEnqueueWriteBuffer(buf.copy_q, buf.buf_cl, CL_TRUE, 0, transformed_size, transformed_mat.data, 0, NULL, NULL));
+
+    s->buf.queue(buf_idx);
+
+    ++frame_id;
+    buf_idx = (buf_idx + 1) % FRAME_BUF_COUNT;
+  }
 }
 
+
 void driver_camera_thread(CameraState *s) {
-  cv::VideoCapture cap_driver(DRIVER_CAMERA_ID, cv::CAP_V4L2); // driver
-  cap_driver.set(cv::CAP_PROP_FRAME_WIDTH, 853);
-  cap_driver.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
-  cap_driver.set(cv::CAP_PROP_FPS, s->fps);
-  // cv::Rect roi_front(320, 0, 960, 720);
+  std::string pipeline = gstreamer_pipeline(
+        1,
+        1280,
+        720,
+        s->fps,
+        2,
+        FRAME_WIDTH,
+        FRAME_HEIGHT);
+
+  cv::VideoCapture cap_driver(pipeline, cv::CAP_GSTREAMER); // road
+
+  std::cout << "Using pipeline: \n\t" << pipeline << "\n";
+
+  std::cout << "Driver Started: " << cap_driver.isOpened() << "\n";
 
   // transforms calculation see tools/webcam/warp_vis.py
   float ts[9] = {1.42070485, 0.0, -30.16740088,
@@ -134,15 +205,40 @@ void driver_camera_thread(CameraState *s) {
   // float ts[9] = {-1.42070485, 0.0, 1182.2,
   //                 0.0, -1.42070485, 773.0,
   //                 0.0, 0.0, 1.0};
-  run_camera(s, cap_driver, ts);
+  assert(cap_driver.isOpened());
+
+  cv::Size size(s->ci.frame_width, s->ci.frame_height);
+  const cv::Mat transform = cv::Mat(3, 3, CV_32F, ts);
+  uint32_t frame_id = 0;
+  size_t buf_idx = 0;
+
+  while (!do_exit) {
+    cv::Mat frame_mat, transformed_mat;
+    cap_driver.read(frame_mat);
+    if (frame_mat.empty()) continue;
+
+    //cv::warpPerspective(frame_mat, transformed_mat, transform, size, cv::INTER_LINEAR, cv::BORDER_CONSTANT, 0);
+    transformed_mat = frame_mat;
+
+    s->buf.camera_bufs_metadata[buf_idx] = {.frame_id = frame_id};
+
+    auto &buf = s->buf.camera_bufs[buf_idx];
+    int transformed_size = transformed_mat.total() * transformed_mat.elemSize();
+    CL_CHECK(clEnqueueWriteBuffer(buf.copy_q, buf.buf_cl, CL_TRUE, 0, transformed_size, transformed_mat.data, 0, NULL, NULL));
+
+    s->buf.queue(buf_idx);
+
+    ++frame_id;
+    buf_idx = (buf_idx + 1) % FRAME_BUF_COUNT;
+  }
 }
 
 }  // namespace
 
 void cameras_init(VisionIpcServer *v, MultiCameraState *s, cl_device_id device_id, cl_context ctx) {
-  camera_init(v, &s->road_cam, CAMERA_ID_LGC920, 20, device_id, ctx,
+  camera_init(v, &s->road_cam, CAMERA_ID_IMX219, 20, device_id, ctx,
               VISION_STREAM_RGB_BACK, VISION_STREAM_ROAD);
-  camera_init(v, &s->driver_cam, CAMERA_ID_LGC615, 10, device_id, ctx,
+  camera_init(v, &s->driver_cam, CAMERA_ID_IMX219, 10, device_id, ctx,
               VISION_STREAM_RGB_FRONT, VISION_STREAM_DRIVER);
   s->pm = new PubMaster({"roadCameraState", "driverCameraState", "thumbnail"});
 }

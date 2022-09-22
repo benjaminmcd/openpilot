@@ -156,15 +156,15 @@ static void update_state(UIState *s) {
   if ((!scene.started && !s->should_turn_screen_off) && sm.updated("sensorEvents")) {
     for (auto sensor : sm["sensorEvents"].getSensorEvents()) {
       if (sensor.which() == cereal::SensorEventData::ACCELERATION) {
-        auto accel = sensor.getAcceleration().getV();
-        if (accel.totalSize().wordCount) { // TODO: sometimes empty lists are received. Figure out why
-          scene.accel_sensor = accel[2];
-        }
+        //auto accel = sensor.getAcceleration().getV();
+        //if (accel.totalSize().wordCount) { // TODO: sometimes empty lists are received. Figure out why
+        //  scene.accel_sensor = accel[2];
+        //}
       } else if (sensor.which() == cereal::SensorEventData::GYRO_UNCALIBRATED) {
-        auto gyro = sensor.getGyroUncalibrated().getV();
-        if (gyro.totalSize().wordCount) {
-          scene.gyro_sensor = gyro[1];
-        }
+        //auto gyro = sensor.getGyroUncalibrated().getV();
+        //if (gyro.totalSize().wordCount) {
+        //  scene.gyro_sensor = gyro[1];
+        //}
       }
     }
   }

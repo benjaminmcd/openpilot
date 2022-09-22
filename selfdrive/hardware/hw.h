@@ -9,7 +9,7 @@
 #elif QCOM2
 #include "selfdrive/hardware/tici/hardware.h"
 #define Hardware HardwareTici
-#else
+#elif PC
 class HardwarePC : public HardwareNone {
 public:
   static std::string get_os_version() { return "openpilot for PC"; }
@@ -17,6 +17,14 @@ public:
   static bool TICI() { return util::getenv("TICI", 0) == 1; }
 };
 #define Hardware HardwarePC
+#else
+class HardwareNX : public HardwareNone {
+public:
+  static std::string get_os_version() { return "openpilot for Jetson"; }
+  static bool NX() { return true; }
+  static bool TICI() { return util::getenv("TICI", 0) == 1; }
+};
+#define Hardware HardwareNX
 #endif
 
 namespace Path {

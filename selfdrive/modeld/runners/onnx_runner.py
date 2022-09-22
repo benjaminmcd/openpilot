@@ -52,7 +52,7 @@ if __name__ == "__main__":
     options.inter_op_num_threads = 8
     options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
     options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
-    provider = 'CPUExecutionProvider'
+    provider = 'CUDAExecutionProvider'
 
   print("Onnx selected provider: ", [provider], file=sys.stderr)
   ort_session = ort.InferenceSession(sys.argv[1], options, providers=[provider])

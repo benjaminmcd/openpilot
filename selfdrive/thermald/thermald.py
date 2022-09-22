@@ -20,7 +20,7 @@ from common.params import Params
 from common.realtime import DT_TRML, sec_since_boot
 from selfdrive.controls.lib.alertmanager import set_offroad_alert
 from selfdrive.controls.lib.pid import PIController
-from selfdrive.hardware import EON, HARDWARE, PC, TICI
+from selfdrive.hardware import EON, HARDWARE, PC, TICI, NX
 from selfdrive.loggerd.config import get_available_percent
 from selfdrive.statsd import statlog
 from selfdrive.swaglog import cloudlog
@@ -274,7 +274,7 @@ def thermald_thread(end_event, hw_queue):
         if TICI:
           cloudlog.info("Setting up TICI fan handler")
           handle_fan = handle_fan_tici
-        elif is_uno or PC:
+        elif is_uno or PC or NX:
           cloudlog.info("Setting up UNO fan handler")
           handle_fan = handle_fan_uno
         else:
@@ -354,7 +354,7 @@ def thermald_thread(end_event, hw_queue):
       set_offroad_alert_if_changed("Offroad_StorageMissing", missing)
 
     # Handle offroad/onroad transition
-    should_start = all(onroad_conditions.values())
+    should_start = True # all(onroad_conditions.values())
     if started_ts is None:
       should_start = should_start and all(startup_conditions.values())
 

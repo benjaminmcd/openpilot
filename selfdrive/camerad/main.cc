@@ -7,7 +7,7 @@
 #include "selfdrive/hardware/hw.h"
 
 int main(int argc, char *argv[]) {
-  if (!Hardware::PC()) {
+  if (!(Hardware::PC() || Hardware::NX())) {
     int ret;
     ret = util::set_realtime_priority(53);
     assert(ret == 0);

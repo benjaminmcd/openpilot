@@ -1,6 +1,6 @@
 
 #operate with params
-OP_PARAMS_PATH = "/data/params/"
+OP_PARAMS_PATH = "/data/params"
 
 def save_bool_param(param_name,param_value):
     try:

@@ -12,7 +12,7 @@ from common.spinner import Spinner
 from common.timeout import Timeout
 from common.transformations.camera import get_view_frame_from_road_frame, eon_f_frame_size, tici_f_frame_size, \
                                           eon_d_frame_size, tici_d_frame_size
-from selfdrive.hardware import PC, TICI
+from selfdrive.hardware import PC, TICI, NX
 from selfdrive.manager.process_config import managed_processes
 from selfdrive.test.openpilotci import BASE_URL, get_url
 from selfdrive.test.process_replay.compare_logs import compare_logs, save_log
@@ -142,7 +142,7 @@ if __name__ == "__main__":
       'driverState.modelExecutionTime',
       'driverState.dspExecutionTime'
     ]
-    tolerance = None if not PC else 1e-3
+    tolerance = None if not (PC or NX) else 1e-3
     results: Any = {TEST_ROUTE: {}}
     results[TEST_ROUTE]["models"] = compare_logs(cmp_log, log_msgs, tolerance=tolerance, ignore_fields=ignore)
     diff1, diff2, failed = format_diff(results, ref_commit)

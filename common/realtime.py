@@ -6,7 +6,7 @@ import multiprocessing
 from typing import Optional
 
 from common.clock import sec_since_boot  # pylint: disable=no-name-in-module, import-error
-from selfdrive.hardware import PC, TICI
+from selfdrive.hardware import NX, PC, TICI
 
 
 # time step for each process
@@ -33,7 +33,7 @@ class Priority:
 
 
 def set_realtime_priority(level: int) -> None:
-  if not PC:
+  if not(PC or NX):
     os.sched_setscheduler(0, os.SCHED_FIFO, os.sched_param(level))  # type: ignore[attr-defined]
 
 

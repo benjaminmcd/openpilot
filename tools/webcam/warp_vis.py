@@ -7,6 +7,11 @@ eon_dcam_focal_length = 860.0  # pixels
 
 webcam_focal_length = -908.0/1.5  # pixels
 
+#https://support.geocue.com/converting-focal-length-from-pixels-to-millimeters-to-use-in-bentley-context-capture/#:~:text=The%20focal%20length%20field%20in,width%20in%20pixels%20is%205472.
+#focal length = 2.8mm
+#sensor width = 
+imx_21_focal_length = 819.29
+
 eon_intrinsics = np.array([
   [eon_focal_length,   0.,   1164/2.],
   [  0.,  eon_focal_length,  874/2.],
@@ -22,12 +27,19 @@ webcam_intrinsics = np.array([
   [  0.,  webcam_focal_length,  720/2/1.5],
   [  0.,    0.,     1.]])
 
+imx_219_intrinsics = np.array([
+  [1470,   0.,   528],
+  [  0.,  1956,  541],
+  [  0.,    0.,     1.]])
+
 if __name__ == "__main__":
-  import cv2  # pylint: disable=import-error
-  trans_webcam_to_eon_rear = np.dot(eon_intrinsics, np.linalg.inv(webcam_intrinsics))
-  trans_webcam_to_eon_front = np.dot(eon_dcam_intrinsics, np.linalg.inv(webcam_intrinsics))
+  import cv2 # pylint: disable=import-error
+  trans_webcam_to_eon_rear = np.dot(eon_intrinsics, np.linalg.inv(eon_intrinsics))
+  trans_webcam_to_eon_front = np.dot(eon_dcam_intrinsics, np.linalg.inv(eon_intrinsics))
   print("trans_webcam_to_eon_rear:\n", trans_webcam_to_eon_rear)
   print("trans_webcam_to_eon_front:\n", trans_webcam_to_eon_front)
+  print( np.linalg.inv(eon_intrinsics))
+  print( np.linalg.inv(imx_219_intrinsics))
 
   cap = cv2.VideoCapture(1)
   cap.set(cv2.CAP_PROP_FRAME_WIDTH, 853)

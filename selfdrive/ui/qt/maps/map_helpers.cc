@@ -15,7 +15,7 @@ QString get_mapbox_token() {
 QMapboxGLSettings get_mapbox_settings() {
   QMapboxGLSettings settings;
 
-  if (!Hardware::PC()) {
+  if (!(Hardware::PC() || !Hardware::NX())) {
     settings.setCacheDatabasePath(MAPS_CACHE_PATH);
   }
   settings.setApiBaseUrl(MAPS_HOST);

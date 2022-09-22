@@ -17,12 +17,26 @@ webcam_intrinsics = np.array([
 
 cam_id = 2
 
+def gstreamer_pipeline(sensor_id, capture_width, capture_height, framerate, flip_method, display_width, display_height):
+#    return "nvarguscamerasrc sensor_mode=4 sensor-id=" + str(sensor_id) + " ! video/x-raw(memory:NVMM), width=3264, height=2464, framerate=(fraction)" + str(framerate) + "/1, format=(string)NV12 ! nvvidconv flip-method=2 ! video/x-raw, format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)BGR ! videoscale ! video/x-raw,width=" + str(width) + ",height=" + str(height) + " ! appsink";
+  return "nvarguscamerasrc sensor_mode=2 sensor-id=" + str(sensor_id) + " ! video/x-raw(memory:NVMM), width=(int)" + str(capture_width) + ", height=(int)" +str(capture_height) + ", format=(string)NV12, framerate=(fraction)" + str(framerate) + "/1 ! nvvidconv flip-method=" + str(flip_method) + " ! video/x-raw, width=(int)" + str(display_width) + ", height=(int)" + str(display_height) + ", format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)BGR ! appsink";
+
+
 if __name__ == "__main__":
   import cv2  # pylint: disable=import-error
 
   trans_webcam_to_eon_front = np.dot(eon_dcam_intrinsics, np.linalg.inv(webcam_intrinsics))
 
-  cap = cv2.VideoCapture(cam_id)
+  pipeline = gstreamer_pipeline(
+          0,
+          1920,
+          1280,
+          30,
+          2,
+          800,
+          600)
+
+  cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
   cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
   cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
